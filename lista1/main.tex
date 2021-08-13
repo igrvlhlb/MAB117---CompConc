@@ -1,0 +1,180 @@
+\documentclass{article}
+
+\usepackage{enumitem}
+\usepackage[a4paper, hmargin=3cm, tmargin=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{minted}
+\usepackage[dvipsnames]{xcolor}
+
+
+\setmainfont{URW Bookman}
+\setmonofont{Iosevka}
+
+\title{\Large \textbf{Computação Concorrente}\\
+	\large Lista 1
+}
+
+\author{Igor de Araujo Vilhalba}
+\date{12/08/2021}
+
+\setlength{\parskip}{1em}
+
+\setminted[c]{ %
+    linenos=true,
+    autogobble=true,
+	bgcolor=pink
+}
+
+\newcommand{\Tz}{\textbf{T0}}
+\newcommand{\Tu}{\textbf{T1}}
+
+\begin{document}
+
+\maketitle
+
+\section*{Questão 1}
+
+\begin{enumerate}[label=\textbf{\alph*)}]
+	% a)
+	\item Um programa concorrente é caracterizado pela presença de fluxos de execução,
+		enquanto um programa sequencial possui apenas uma. Podemos pensar em fluxos
+		de execução como uma sequência de instruções. Se um programa é concorrente,
+		há mais de uma sequência de instruções que serão tratadas independentemente.\\
+		É importante notar que a concorrência não implica na execução simultânea de
+		mais de um fluxo de execução (\emph{paralelismo}).
+	\item Para problemas que podem ser divididos em subtarefas que independem umas das
+		outras. Isso é, podemos dividir o problema em múltiplos fluxos de execução
+		onde a execução de um não depende do término de outro. Se houvesse essa
+		dependência, o modelo seria sequencial, não concorrente.
+	\item O limite teórico para o ganho de performance (aceleração), de acordo com
+		a \textbf{lei de Amdahl} é
+		\begin{center}
+			$$
+			Acel = \frac{T_{seq}}{T_s+T_P(P)}
+			$$
+			onde $T_{seq}$ é o tempo de execução do programa em um único fluxo,
+			$T_s$ é a parte estritamente sequencial do programa (não é dividida
+			entre as threads) e $T_P(P)$ é a parte concorrente com o uso de $P$
+			processadores (ou núcleos).
+		\end{center}
+		Como nesse caso não há a informação sobre a parte sequencial, vamos considerar apenas
+		as partes paralelas. Isso nos dá a nova equação
+		\begin{center}
+			$$
+			Acel = \frac{T_{seq}}{T_P(P)}
+			$$
+		\end{center}
+		Temos que apenas três fluxos podem ser executados paralelamente. Com base nessa informação,
+		vamos considerar que o computador que roda esse programa possui três processadores (ou núcleos).\\
+
+		Como não estamos considerando nenhuma parte sequencial do programa, temos que cada fluxo de execução
+		gasta o tempo $T_{seq}/5$ e a parte paralela do programa gasta $T_{seq}$.
+		Então o tempo de execução da parte concorrente com 3 processadores (ou núcleos) deve gastar, idealmente,
+		o tempo $T_{seq}/3$ para executar.\\
+		Isso nos dá que a aceleração máxima teórica é 3.
+	\item A \emph{seção crítica} é uma porção do código que acessa algum recurso
+		compartilhado que não pode ser acessado por mais de um fluxo ao mesmo tempo.
+	\item É uma técnica de sincronização que consiste em ``\emph{travar}'' a seção crítica
+		das demais threads caso alguma delas já tenha entrado nela.\\
+		Essa técnica funciona com uma ``trava'' (\emph{mutex lock}). Quando uma thread
+		chega na seção crítica, antes de executá-la, verifica se ela está destravada
+		(se a trava está ``desativada'' ou, em outras palavras, nenhuma outra thread
+		possui a trava). Se a seção estiver travada, a thread é interrompida, e o controle
+		é passado para outra qualquer (isso fica a cargo do sistema operacional), já que
+		ela não pode prosseguir com a execução.\\
+		Caso a seção crítica esteja destravada, essa thread passa a possuir a trava, fazendo
+		com que as demais não possam entrar na seção crítica enquanto esta thread não a soltar.
+\end{enumerate}
+
+\section*{Questão 2}
+
+Como uma função que é chamada por \texttt{pthread\_create()} recebe como argumento apenas um ponteiro,
+precisamos definir uma \emph{struct} para passar os argumentos para ela. A chamaremos de \texttt{args\_t}.\\
+Sua declaração é como segue:
+
+\begin{minted}{c}
+typedef struct {
+	int id; // identificador da thread
+	int nt; // numero de threads
+	int n; // quantidade de termos - 1
+	double res; // escreveremos o resultado aqui
+} args_t;
+\end{minted}
+
+Antes de falar sobre a estratégia utilizada, vamos reescrever o somatório de $\pi$ da seguinte forma:
+\begin{center}
+	$$
+	\pi = \sum_{i=0}^n{(-1)^ia_i} 
+	$$
+	onde $a_i = \frac{4}{2i+1}$
+\end{center}
+
+A estratégia utilizada será calcular os itens intercalados. Cada thread começará calculando o termo
+$a_{id+nt*k}$, para $k=0,1,...,m$ e $nt*m \le n$.
+
+Escolhi essa estratégia pelo seguinte motivo: se o somatório fosse particionado em $nt$ partes,
+a thread que ficasse encarregada de calcular os termos iniciais do somatório acabaria tendo um
+resultado numérico bem maior que o da que ficasse com os termos próximos de $n$, visto que conforme
+$i$ aumenta, $a_i$ se aproxima de zero. Isso pode ter consequências sobre a precisão da
+operação de soma em ponto flutuante. Por esse motivo, cada thread calculará tanto os termos iniciais
+(mais próximos de 1) quanto os finais (mais próximos de 0). Assim, cada uma das threads retornará números
+com ordens de grandeza iguais (ou próximas).
+
+Agora basta escrever a função.
+
+\begin{minted}{c}
+void *calcula_pi(void *arg) {
+	// nao vamos liberar a memoria.
+	// isso sera obrigacao de quem criou a struct
+	t_args *args = (t_args *)arg;
+	int id = args->id;
+	int nt = args->nt;
+	int n = args->n;
+	double soma = 0;
+
+	for (int i = id; i <= n; i += nt) {
+		int a_i = 4 / (2*i + 1);
+		if (i % 2 == 0) {
+			soma += a_i;
+		} else {
+			soma -= a_i;
+		}
+	}
+
+	args->res = soma;
+
+	return NULL;
+}
+\end{minted}
+
+Como podemos ver, o resultado está sendo retornado na própria \emph{struct} que foi passada como
+argumento para a função. Fiz essa escolha para evitar usar o \texttt{malloc()} para guardar apenas
+um valor. Uma alternativa possível seria retornar o valor da variável \texttt{soma} através de um
+\emph{typecast}, fazendo com que se passasse pelo tipo \texttt{void *}. Entretanto, não há como garantir
+que o tamanho do tipo \texttt{double} é o mesmo do tipo \texttt{void *} em todas as arquiteturas.
+
+\section*{Questão 3}
+
+
+
+\section*{Questão 4}
+
+\begin{enumerate}[label=\textbf{\alph*)}]
+	\item Se \Tz\ conseguir terminar a execução da linha \textbf{(2)}, há a garantia de que conseguirá
+		executar a seção crítica.
+		\begin{itemize}
+			\item Se perder o controle entre as linhas \textbf{(2)} e \textbf{(3)} e \Tu\ começar a
+				executar, \Tu\ vai fazer \texttt{TURN=0} e não vai poder executar a seção crítica (pois
+				\texttt{queroEntrar\_0} vale \emph{true}).\\
+				Quando o controle voltar a \Tz, a variável \texttt{TURN} não será modificada e terá o valor
+				que \Tu\ deu a ela (0) e, portanto, poderá executar a seção crítica.
+			\item Se chgar na linha \textbf{(3)} antes de \Tu\ começar sua execução, o valor de
+				\texttt{queroEntrar\_1} será \emph{false} e, portanto, conseguirá executar a seção crítica
+				sem problemas.
+		\end{itemize}
+	\item
+	\item
+	\item
+\end{enumerate}
+
+\end{document}
