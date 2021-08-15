@@ -5,12 +5,14 @@
 \usepackage{fontspec}
 \usepackage{minted}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{setspace}
 
 
 \setmainfont{URW Bookman}
 \setmonofont{Iosevka}
 
-\title{\Large \textbf{Computação Concorrente}\\
+\title{\Large \textbf{Computação Concorrente}
+	\vspace{0.5em}\\
 	\large Lista 1
 }
 
@@ -27,6 +29,10 @@
 
 \newcommand{\Tz}{\textbf{T0}}
 \newcommand{\Tu}{\textbf{T1}}
+\newcommand{\Td}{\textbf{T2}}
+\newcommand{\Tt}{\textbf{T3}}
+
+\newcommand{\TL}[2]{\textbf{(#1)}$_{T#2}$}
 
 \begin{document}
 
@@ -155,7 +161,46 @@ que o tamanho do tipo \texttt{double} é o mesmo do tipo \texttt{void *} em toda
 
 \section*{Questão 3}
 
+Para simplificar, vamos desconsiderar as instruções de máquina (lê-atualiza-escreve), apenas as analizando
+se necessário. Vamos olhar para cada valor e analizar se há uma sequência de linhas possível para obtar o
+resultado. Para indicar a sequência de linhas executadas, com sua respectiva thread, vamos usar a notação
+\textbf{(n)}$_{Tk}$, onde $n$ é a linha e $k$ é o número da thread.
 
+\begin{itemize}
+	\item \textbf{-1}\par
+		Se \Tu\ executar por inteiro sem que as outras duas threads sejam executadas, $-1$ será impresso.
+	\item \textbf{0}\par
+		Se \Tu\ executar, mas antes de conseguir executar a linha \textbf{(5)} a linha \TL{1}{3}
+		for executada (e possívelmente a thread \Td\ inteira), então quando \Tu\ voltar a executar, vai imprimir 1.
+	\item \textbf{2}\par
+		A sequência de linhas \TL{1}{3}--\TL{2}{3}--\TL{1}{1}--\TL{2}{1}--%
+		\TL{1}{2}--\TL{3}{3} é capaz de imprimir o valor 2.
+		\pagebreak
+	\item \textbf{-2}\par
+		Se \Tu\ e \Td\ executarem paralelamente e \TL{3}{1} estiver executanto ao mesmo tempo de \TL{1}{2},
+		como vimos em aula, pode ser que \Tu\ leia o valor de x e o decremente no registrador (sem ainda escrever
+		de volta na memória), enquanto \Td\ faz o mesmo. Entretanto, se \Td\ fizer a escrita antes de \Tu, \Tu\
+		sobrescreverá a escrita feita por \Td.\\
+		Por exemplo, após a execução de \TL{2}{1}, \texttt{x=0}. \Tu\ vai ler x e decrementar no registrador e
+		\Td\ vai ler e incrementar no registrador. Se \Td\ escrever na memória primeiro, escreverá $1$ (agora \texttt{x=1}).
+		Entretanto, em seguida \Tu\ escreverá na memória o valor que calculou, que é $-1$. Isso fará com que seja como se
+		\TL{1}{2} nem tivesse sido executada.\\
+		Agora vamos supor que \Tu\ consiga entrar no \emph{if}, já que o valor de x na memória é $-1$. Então antes de executar
+		a linha \TL{5}{1}, a linha \TL{2}{2} seja executada e consiga escrever na memória. Nesse ponto, x valerá $-2$. Agora,
+		quando \TL{6}{1} for executada, o programa imprimirá $-2$.
+	\item \textbf{3}\par
+		Vamos supor que \Tt\ cosiga executar até entrar no \emph{if}. Agora, vamos supor também que \Tu\ e \Td\ executem
+		paralelamente. Se, com base no mesmo argumento do exemplo anterior, a atribuição da linha \TL{1}{2} anule a da linha
+		\TL{1}{1}, e após isso alinha \TL{2}{1} execute. Se após essas operações a linha \TL{3}{3} executar, o valor 3 será
+		impresso.
+	\item \textbf{-3}\par
+		Não é possível imprimir esse valor, pois para entrar no \emph{if} da thread \Tu (com \texttt{x=-1}), só sobrará um
+		decremento possível nas outras threads. Já para entrar no \emph{if} da thread \Tt (com \texttt{x=1}), só haverá três
+		decrementos possíveis nas outras threads. Ou seja, se entrar em qualquer um dos dois \emph{if}s, não será possível
+		decrementar x até o valor $-3$.
+	\item \textbf{4}\par
+		Não é possível imprimir esse valor, pois só há 3 incrementos se juntarmos as três threads.
+\end{itemize}
 
 \section*{Questão 4}
 
@@ -173,8 +218,20 @@ que o tamanho do tipo \texttt{double} é o mesmo do tipo \texttt{void *} em toda
 				sem problemas.
 		\end{itemize}
 	\item
+		O caso da \Tu\ começar sua execução antes de \Tz\ é análogo ao caso onde \Tz\ começa primeiro.
 	\item
+		Se ambas começam a execução ao mesmo tempo, podemos supor que a execução é \emph{paralela} (acontece
+		em duas unidades de processamento ao mesmo tempo). Então vamos considerar que cada linha seja executada
+		praticamente ao mesmo tempo. A linha \textbf{(1)} não apresenta nenhum problema. Entretanto, quando
+		chegarem à linha \textbf{2} a escrita na variável \texttt{TURN} não acontecerá realmente ao mesmo tempo.
+		Na prática, ou \Tz\ ou \Tu\ vai modificála por último. Essa que modificar por último será a thread que
+		executará por último sua seção crítica.
 	\item
+		Sim. Como uma thread muda a variável \texttt{TURN} para que a vez seja da outra thread, a thread em
+		questão não espera que seja ela que vai executar a seção crítica. Ela só executará ou se a veriável
+		\texttt{queroEntrar\_x} (x sendo 0 ou 1) valer \emph{false} ou se a outra thread fizer
+		\texttt{TURN} permitir que esta thread execute a seção crítica. Nesse caso, a outra thread não executará
+		se esta thread tiver a variável \texttt{queroEntrar\_x} como \emph{true}.
 \end{enumerate}
 
 \end{document}
