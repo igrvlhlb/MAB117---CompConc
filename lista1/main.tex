@@ -56,28 +56,50 @@
 		a \textbf{lei de Amdahl} é
 		\begin{center}
 			$$
-			Acel = \frac{T_{seq}}{T_s+T_P(P)}
+			Acel = \frac{T_s + T_P(1)}{T_s+T_P(P)}
 			$$
-			onde $T_{seq}$ é o tempo de execução do programa em um único fluxo,
-			$T_s$ é a parte estritamente sequencial do programa (não é dividida
-			entre as threads) e $T_P(P)$ é a parte concorrente com o uso de $P$
-			processadores (ou núcleos).
+			onde $T_P(1)$ é o tempo de execução da parte concorrente do programa
+			em um único fluxo, $T_s$ é a parte estritamente sequencial do programa
+			(não é dividida entre as threads) e $T_P(P)$ é a parte concorrente com
+			o uso de $P$ processadores (ou núcleos).
 		\end{center}
 		Como nesse caso não há a informação sobre a parte sequencial, vamos considerar apenas
-		as partes paralelas. Isso nos dá a nova equação
+		as partes paralelas (ou seja, $T_s = 0$). Isso nos dá a nova equação
 		\begin{center}
 			$$
-			Acel = \frac{T_{seq}}{T_P(P)}
+			Acel = \frac{T_P(1)}{T_P(P)}
 			$$
 		\end{center}
 		Temos que apenas três fluxos podem ser executados paralelamente. Com base nessa informação,
-		vamos considerar que o computador que roda esse programa possui três processadores (ou núcleos).\\
+		vamos considerar que o computador que roda esse programa possui três processadores (ou seja, $P=3$).
 
-		Como não estamos considerando nenhuma parte sequencial do programa, temos que cada fluxo de execução
-		gasta o tempo $T_{seq}/5$ e a parte paralela do programa gasta $T_{seq}$.
-		Então o tempo de execução da parte concorrente com 3 processadores (ou núcleos) deve gastar, idealmente,
-		o tempo $T_{seq}/3$ para executar.\\
-		Isso nos dá que a aceleração máxima teórica é 3.
+		Temos que $T_P(P) = \frac{T_P(1)}{P}$. Se substituirmos na equação, temos:
+		\begin{center}
+			\[
+			Acel = \frac{T_P(1)}{\frac{T_P(1)}{P}} = P
+			\]
+		\end{center}
+
+		Isso nos diz que a aceleração máxima de um programa que não tem uma parte estritamente sequencial
+		(o que seria $T_s$) e utiliza 3 processadores vale 3.
+
+		Entretanto, vale a pena olhar com mais cuidado para o caso que temos em mãos aqui. Como o valor que
+		estamos tentando obter é um valor \emph{teórico}, vamos supor que as três threads que rodam paralelamente
+		começam e terminam ao mesmo tempo. Vamos supor que cada thread leva o tempo $T' = T_P(1)/5$ (já que estamos
+		dividindo a parte sequêncial em 5). Temos que o tempo para as três threads paralelas executarem é apenas $T'$,
+		já que é o tempo gasto por cada uma individualmente e elas executam ao mesmo tempo (é o mesmo que ter uma
+		aceleração 3 para uma seção que consome o tempo $3T'$!).\\
+		Agora que três threads foram concluídas, restam duas para executar. De forma análoga, essas duas restantes
+		gastarão apenas o tempo $T'$. Isso nos dá que $T_P(P)$ nesse caso vale $2T' = 2\frac{T_P(1)}{5}$ e a aceleração
+		é $\frac{5}{2}$ (o que é inferior ao que obteriamos se utilizassemos apenas 3 threads!).
+
+		No geral, podemos deduzir que a fórmula geral para o tempo consumido quando dividimos uma seção entre $n$
+		threads, onde temos somente $P$ processadores (onde $n \ge P$), é:
+		\begin{center}
+			$T_P(n) = \lceil\frac{n}{P}\rceil\frac{T_P(1)}{n}$
+		\end{center}
+		Onde $\lceil x \rceil$ significa o menor inteiro maior ou igual a $x$ (função teto).
+
 	\item A \emph{seção crítica} é uma porção do código que acessa algum recurso
 		compartilhado que não pode ser acessado por mais de um fluxo ao mesmo tempo.
 	\item É uma técnica de sincronização que consiste em ``\emph{travar}'' a seção crítica
@@ -175,7 +197,6 @@ resultado. Para indicar a sequência de linhas executadas, com sua respectiva th
 	\item \textbf{2}\par
 		A sequência de linhas \TL{1}{3}--\TL{2}{3}--\TL{1}{1}--\TL{2}{1}--%
 		\TL{1}{2}--\TL{3}{3} é capaz de imprimir o valor 2.
-		\pagebreak
 	\item \textbf{-2}\par
 		Se \Tu\ e \Td\ executarem paralelamente e \TL{3}{1} estiver executanto ao mesmo tempo de \TL{1}{2},
 		como vimos em aula, pode ser que \Tu\ leia o valor de x e o decremente no registrador (sem ainda escrever
