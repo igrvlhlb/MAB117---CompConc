@@ -7,6 +7,9 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{setspace}
 
+\usepackage{tikz}
+\usetikzlibrary{backgrounds}
+
 
 \setmainfont{URW Bookman}
 \setmonofont{Iosevka}
@@ -56,28 +59,47 @@
 		a \textbf{lei de Amdahl} é
 		\begin{center}
 			$$
-			Acel = \frac{T_{seq}}{T_s+T_P(P)}
+			Acel = \frac{T_s + T_P(1)}{T_s+T_P(P)}
 			$$
-			onde $T_{seq}$ é o tempo de execução do programa em um único fluxo,
-			$T_s$ é a parte estritamente sequencial do programa (não é dividida
-			entre as threads) e $T_P(P)$ é a parte concorrente com o uso de $P$
-			processadores (ou núcleos).
+			onde $T_P(1)$ é o tempo de execução da parte concorrente do programa
+			em um único fluxo, $T_s$ é a parte estritamente sequencial do programa
+			(não é dividida entre as threads) e $T_P(P)$ é a parte concorrente com
+			o uso de $P$ processadores (ou núcleos).
 		\end{center}
-		Como nesse caso não há a informação sobre a parte sequencial, vamos considerar apenas
-		as partes paralelas. Isso nos dá a nova equação
-		\begin{center}
-			$$
-			Acel = \frac{T_{seq}}{T_P(P)}
-			$$
-		\end{center}
-		Temos que apenas três fluxos podem ser executados paralelamente. Com base nessa informação,
-		vamos considerar que o computador que roda esse programa possui três processadores (ou núcleos).\\
 
-		Como não estamos considerando nenhuma parte sequencial do programa, temos que cada fluxo de execução
-		gasta o tempo $T_{seq}/5$ e a parte paralela do programa gasta $T_{seq}$.
-		Então o tempo de execução da parte concorrente com 3 processadores (ou núcleos) deve gastar, idealmente,
-		o tempo $T_{seq}/3$ para executar.\\
-		Isso nos dá que a aceleração máxima teórica é 3.
+		{\footnotesize \textbf{Obs.:} Para fazermos os cálculos, vamos substituir a palavra
+		\emph{concorrente} por \emph{paralela}, já que é com base nisso que a lei de Amdahl
+		nos dá a aceleração.}
+
+		Como nesse caso não há duas tarefas que executam sequencialmente, elas que vão compor
+		$T_s$. Digamos que cada tarefa consuma o tempo $T$. Disso tiramos que $T_s = 2T$ (já que
+		são \textbf{duas} tarefas que gastam tempo $T$).
+
+
+		Como são três tarefas que serão executadas concorrentemente e cada tarefa gasta o tempo $T$,
+		temos que essas três tarefas quando executadas sequencialmente (por um único processador,
+		em outras palavras) gastam $3T$. Ou seja, $T_P(1) = 3T$. Temos, também que essas três tarefas
+		quando executadas por três processadores (paralelamente) gastam o tempo $T_P(P) = 3T/3 = T$.
+		Agora basta substituirmos na equação.
+
+		\begin{center}
+
+		\tikzstyle{background rectangle}=[thin,draw=black]
+		\begin{tikzpicture}[show background rectangle]
+		\node[align=justify, text width=0.5\textwidth]{
+			$$
+			Acel = \frac{2T + 3T}{2T + T} = \frac{5T}{3T} = \frac{5}{3}
+			$$
+		};
+
+		\node[xshift=3ex, yshift=-0.7ex, overlay, fill=white, draw=white, above 
+		right] at (current bounding box.north west) {
+		\textit{Resposta}
+		};
+
+\end{tikzpicture}
+		\end{center}
+
 	\item A \emph{seção crítica} é uma porção do código que acessa algum recurso
 		compartilhado que não pode ser acessado por mais de um fluxo ao mesmo tempo.
 	\item É uma técnica de sincronização que consiste em ``\emph{travar}'' a seção crítica
@@ -175,7 +197,6 @@ resultado. Para indicar a sequência de linhas executadas, com sua respectiva th
 	\item \textbf{2}\par
 		A sequência de linhas \TL{1}{3}--\TL{2}{3}--\TL{1}{1}--\TL{2}{1}--%
 		\TL{1}{2}--\TL{3}{3} é capaz de imprimir o valor 2.
-		\pagebreak
 	\item \textbf{-2}\par
 		Se \Tu\ e \Td\ executarem paralelamente e \TL{3}{1} estiver executanto ao mesmo tempo de \TL{1}{2},
 		como vimos em aula, pode ser que \Tu\ leia o valor de x e o decremente no registrador (sem ainda escrever
