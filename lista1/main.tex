@@ -194,8 +194,8 @@ resultado. Para indicar a sequência de linhas executadas, com sua respectiva th
 		\TL{1}{1}, e após isso alinha \TL{2}{1} execute. Se após essas operações a linha \TL{3}{3} executar, o valor 3 será
 		impresso.
 	\item \textbf{-3}\par
-		Não é possível imprimir esse valor, pois para entrar no \emph{if} da thread \Tu (com \texttt{x=-1}), só sobrará um
-		decremento possível nas outras threads. Já para entrar no \emph{if} da thread \Tt (com \texttt{x=1}), só haverá três
+		Não é possível imprimir esse valor, pois para entrar no \emph{if} da thread \Tu\ (com \texttt{x=-1}), só sobrará um
+		decremento possível nas outras threads. Já para entrar no \emph{if} da thread \Tt\ (com \texttt{x=1}), só haverá três
 		decrementos possíveis nas outras threads. Ou seja, se entrar em qualquer um dos dois \emph{if}s, não será possível
 		decrementar x até o valor $-3$.
 	\item \textbf{4}\par
