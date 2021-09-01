@@ -3,7 +3,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/* pode-se compilar o programa com valores diferentes
+ * para N. Por exemplo:
+ * $ gcc -DN=4 -o main main.c
+ */
+#ifndef N
 #define N 10
+#endif
+
 int vet[N];
 int terminados = 0;
 pthread_mutex_t mutex;
@@ -39,15 +46,24 @@ void *thread_func(void *vptr) {
 			soma += vet[i];
 		}
 		pthread_mutex_lock(&mutex);
+		fprintf(stderr, "Thread %d somou e adquiriu "
+				"o lock (iteração %d)\n",
+				this_id, iter);
 		terminados += 1;
 		// se nao for o ultimo, espera
 		if (terminados < N) {
+			fprintf(stderr, "Thread %d vai esperar "
+					"(iteração %d)\n",
+					this_id, iter);
 			pthread_cond_wait(&condvar, &mutex);
 		}
 		/* quem for o último libera as outras threads e
 		 * reseta variável `terminados`, para que a próxima
 		 * etapa possa ser iniciada */
 		else {
+			fprintf(stderr, "Thread %d vai liberar "
+					"demais threads (iteração %d)\n",
+					this_id, iter);
 			terminados = 0;
 			pthread_cond_broadcast(&condvar);
 		}
@@ -56,16 +72,30 @@ void *thread_func(void *vptr) {
 		// repopula o vetor (cada thread uma posição)
 		vet[this_id] = rand() % 10; // seed de rand() já foi inicializada
 		pthread_mutex_lock(&mutex);
+		fprintf(stderr, "Thread %d populou e adquiriu "
+				"o lock (iteração %d)\n",
+				this_id, iter);
 		terminados += 1;
-		// se não o último, espera
+		// se não for o último, espera
 		if (terminados < N) {
+			fprintf(stderr, "Thread %d vai esperar "
+					"(iteração %d)\n",
+					this_id, iter);
 			pthread_cond_wait(&condvar, &mutex);
 		} else {
+			fprintf(stderr, "Thread %d vai liberar "
+					"demais threads (iteração %d)\n",
+					this_id, iter);
 			terminados = 0;
 			pthread_cond_broadcast(&condvar);
 		}
 		pthread_mutex_unlock(&mutex);
 	}
+	fprintf(stderr, "Thread %d vai retornar "
+			"(valor somado = %d)\n",
+			this_id, soma);
+	// retorna o resultado
+	args->acum = soma;
 	pthread_exit(NULL);
 }
 
