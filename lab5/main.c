@@ -57,6 +57,7 @@ void *thread_func(void *vptr) {
 		vet[this_id] = rand() % 10; // seed de rand() já foi inicializada
 		pthread_mutex_lock(&mutex);
 		terminados += 1;
+		// se não o último, espera
 		if (terminados < N) {
 			pthread_cond_wait(&condvar, &mutex);
 		} else {
@@ -80,6 +81,7 @@ int main(void) {
 	// popula vetor com valores aleatorios
 	popula_vetor(vet, N);
 	
+	/* cria threads */
 	for (thread = 0; thread < N; thread++) {
 		args[thread] = (struct thread_args){
 			.thread_id = thread,
@@ -90,11 +92,13 @@ int main(void) {
 		}
 	}
 
+	/* coleta threads */
 	for (thread = 0; thread < N; thread++) {
 		if(pthread_join(threads[thread],NULL)) {
 			print_exit("Erro ao fazer join() na thread.", EXIT_FAILURE);
 		}
 		if (thread > 1) {
+			/* verifica se o resultado obtido é compatível com o anterior */
 			if (args[thread].acum != args[thread - 1].acum) {
 				print_exit("Resultados diferem.", EXIT_FAILURE);
 			}
